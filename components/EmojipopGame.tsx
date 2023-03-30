@@ -1,12 +1,10 @@
 "use client";
 
-import gameConfig from "@/game/emojipop";
-import { useGame } from "@/lib/hooks/useGame";
 import { useRef } from "react";
 
 const EmojipopGame = () => {
   const parentEl = useRef<HTMLDivElement>(null);
-  useGame(gameConfig, parentEl);
+  // useGame(gameConfig, parentEl);
 
   return (
     <div
