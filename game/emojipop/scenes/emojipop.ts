@@ -6,16 +6,28 @@ export class Emojipop extends Phaser.Scene {
   xOffset: number;
   yOffset: number;
   bubbleSize: number;
-  launcher: Phaser.Physics.Arcade.Image;
-  bubbles: Phaser.Physics.Arcade.Group;
-  board: Phaser.Physics.Arcade.Image[][];
+  launcher: Phaser.Physics.Arcade.Sprite;
+  bubbles: Phaser.GameObjects.Group;
+  board: Phaser.Physics.Arcade.Sprite[][];
   shooting: boolean;
-  movingBubble: Phaser.Physics.Arcade.Image | null;
+  movingBubble: Phaser.Physics.Arcade.Sprite | null;
+  collisionDetected: boolean;
 
   launcherSpeed = 600;
 
   constructor() {
     super("Emojipop");
+
+    // Generate your board here
+    this.boardWidth = 15;
+    this.boardHeight = 6;
+    this.bubbleSize = 50; // Change this according to your desired bubble size
+    this.xOffset = 50;
+    this.yOffset = 50;
+    this.shooting = false;
+    this.movingBubble = null;
+    this.board = [];
+    this.collisionDetected = false;
   }
 
   preload() {
@@ -28,28 +40,18 @@ export class Emojipop extends Phaser.Scene {
     this.load.image("cannon", "game/cannon.png");
   }
 
-  init() {
-    // Generate your board here
-    this.boardWidth = 15;
-    this.boardHeight = 6;
-    this.bubbleSize = 50; // Change this according to your desired bubble size
-    this.xOffset = 50;
-    this.yOffset = 50;
-    this.bubbles = this.physics.add.group();
-    this.shooting = false;
-  }
-
   create() {
     // Generate your board here
     this.board = this.generateBoard(this);
+    this.bubbles = this.add.group();
 
-    // this.physics.add.collider(
-    //   this.bubbles,
-    //   this.bubbles,
-    //   this.handleBubbleCollision,
-    //   undefined,
-    //   this
-    // );
+    this.physics.add.collider(
+      this.bubbles,
+      this.bubbles,
+      this.handleBubbleCollision,
+      undefined,
+      this
+    );
 
     // Add the bubbles on the board to the bubbles group
     for (let y = 0; y < this.boardHeight; y++) {
@@ -58,7 +60,7 @@ export class Emojipop extends Phaser.Scene {
       }
     }
 
-    this.launcher = this.physics.add.image(400, 550, "launcher");
+    this.launcher = this.physics.add.sprite(400, 550, "launcher");
 
     // Scale the launcher to the desired size
     const launcherScale = this.bubbleSize / this.launcher.width;
@@ -107,39 +109,41 @@ export class Emojipop extends Phaser.Scene {
     const angle = Phaser.Math.DegToRad(this.launcher.angle);
     const velocityX = Math.cos(angle) * this.launcherSpeed;
     const velocityY = Math.sin(angle) * this.launcherSpeed;
-    bubble.setVelocity(10000, 10000);
+    bubble.setVelocity(velocityX, velocityY);
 
     console.log(velocityX, velocityY);
 
     // Add the bubble to the bubbles group
     this.bubbles.add(bubble);
+
+    // Set the movingBubble to the new bubble
+    this.movingBubble = bubble;
   }
 
-  snapToGrid(bubble: Phaser.Physics.Arcade.Image) {
-    const snappedX =
-      Math.round((bubble.x - this.xOffset) / this.bubbleSize) *
-        this.bubbleSize +
-      this.xOffset;
-    const snappedY =
-      Math.round((bubble.y - this.yOffset) / this.bubbleSize) *
-        this.bubbleSize +
-      this.yOffset;
+  snapToGrid(bubble: Phaser.Types.Physics.Arcade.ImageWithDynamicBody) {
+    const xGrid = Math.round((bubble.x - this.xOffset) / this.bubbleSize);
+    const yGrid = Math.round((bubble.y - this.yOffset) / this.bubbleSize);
+
+    const xOffset =
+      yGrid % 2 === 0 ? this.xOffset : this.xOffset + this.bubbleSize / 2;
+
+    const snappedX = xGrid * this.bubbleSize + xOffset;
+    const snappedY = yGrid * this.bubbleSize + this.yOffset;
+
     bubble.setPosition(snappedX, snappedY);
   }
 
   handleBubbleCollision(
-    bubble1: Phaser.Physics.Arcade.Image,
-    bubble2: Phaser.Physics.Arcade.Image
+    bubble: Phaser.Types.Physics.Arcade.ImageWithDynamicBody,
+    other: Phaser.Types.Physics.Arcade.ImageWithDynamicBody
   ) {
-    // Snap the moving bubble to the grid
-    const movingBubble = bubble1.body.velocity.length() > 0 ? bubble1 : bubble2;
-    this.snapToGrid(movingBubble);
+    this.collisionDetected = true;
 
-    // Stop the moving bubble
-    movingBubble.body.stop();
+    // Snap the moving bubble to the grid
+    this.snapToGrid(bubble);
 
     // Check for matches and clear bubbles
-    const matches = this.checkMatches(this, movingBubble);
+    const matches = this.checkMatches(this, bubble);
     if (matches.length >= 3) {
       this.clearMatches(matches);
     }
@@ -147,7 +151,7 @@ export class Emojipop extends Phaser.Scene {
     this.shooting = false;
   }
 
-  checkMatches(scene: Phaser.Scene, bubble: Phaser.Physics.Arcade.Image) {
+  checkMatches(scene: Phaser.Scene, bubble: Phaser.GameObjects.Image) {
     const { x, y } = this.getGridPosition(bubble);
     const board = this.board;
     const visited = new Set();
@@ -160,25 +164,35 @@ export class Emojipop extends Phaser.Scene {
         break;
       }
 
-      const key = `${current?.x},${current?.y}`;
+      if (
+        current.x >= 0 &&
+        current.x < this.boardWidth &&
+        current.y >= 0 &&
+        current.y < this.boardHeight
+      ) {
+        const key = `${current.x},${current.y}`;
 
-      if (!visited.has(key)) {
-        visited.add(key);
-        const currentBubble = board[current.y][current.x];
+        if (!visited.has(key)) {
+          visited.add(key);
+          const currentBubble = board[current.y][current.x];
 
-        if (currentBubble && currentBubble.texture.key === bubble.texture.key) {
-          matches.push(currentBubble);
+          if (
+            currentBubble &&
+            currentBubble.texture.key === bubble.texture.key
+          ) {
+            matches.push(currentBubble);
 
-          // Get neighboring bubbles
-          const neighbors = this.getNeighbors(board, current.x, current.y);
-          neighbors.forEach((neighbor) => {
-            const { x, y } = this.getGridPosition(neighbor);
-            const neighborKey = `${x},${y}`;
+            // Get neighboring bubbles
+            const neighbors = this.getNeighbors(board, current.x, current.y);
+            neighbors.forEach((neighbor) => {
+              const { x, y } = this.getGridPosition(neighbor);
+              const neighborKey = `${x},${y}`;
 
-            if (!visited.has(neighborKey)) {
-              stack.push({ x, y });
-            }
-          });
+              if (!visited.has(neighborKey)) {
+                stack.push({ x, y });
+              }
+            });
+          }
         }
       }
     }
@@ -201,13 +215,27 @@ export class Emojipop extends Phaser.Scene {
     if (x < this.boardWidth - 1) neighbors.push(board[y][x + 1]);
 
     // Get top and bottom neighbors
-    if (y > 0) neighbors.push(board[y - 1][x]);
-    if (y < this.boardHeight - 1) neighbors.push(board[y + 1][x]);
+    if (y > 0) {
+      neighbors.push(board[y - 1][x]);
+      if (y % 2 === 0) {
+        if (x > 0) neighbors.push(board[y - 1][x - 1]);
+      } else {
+        if (x < this.boardWidth - 1) neighbors.push(board[y - 1][x + 1]);
+      }
+    }
+    if (y < this.boardHeight - 1) {
+      neighbors.push(board[y + 1][x]);
+      if (y % 2 === 0) {
+        if (x > 0) neighbors.push(board[y + 1][x - 1]);
+      } else {
+        if (x < this.boardWidth - 1) neighbors.push(board[y + 1][x + 1]);
+      }
+    }
 
     return neighbors;
   }
 
-  getGridPosition(bubble: Phaser.Physics.Arcade.Image) {
+  getGridPosition(bubble: Phaser.GameObjects.Image) {
     const x = Math.round((bubble.x - this.xOffset) / this.bubbleSize);
     const y = Math.round((bubble.y - this.yOffset) / this.bubbleSize);
     return { x, y };
@@ -215,6 +243,23 @@ export class Emojipop extends Phaser.Scene {
 
   update() {
     // Add your game logic and interactions here
+    if (this.movingBubble) {
+      this.physics.collide(
+        this.movingBubble,
+        this.bubbles,
+        this.handleBubbleCollision,
+        undefined,
+        this
+      );
+
+      // If the moving bubble has stopped moving, set it to null
+      if (
+        this.movingBubble.body.velocity.x === 0 &&
+        this.movingBubble.body.velocity.y === 0
+      ) {
+        this.movingBubble = null;
+      }
+    }
   }
 
   generateBoard(scene: Phaser.Scene) {
@@ -222,13 +267,16 @@ export class Emojipop extends Phaser.Scene {
 
     for (let y = 0; y < this.boardHeight; y++) {
       const row = [];
+      // Add an offset for even rows
+      const xOffset =
+        y % 2 === 0 ? this.xOffset : this.xOffset + this.bubbleSize / 2;
       for (let x = 0; x < this.boardWidth; x++) {
         // You can use any logic to assign different images for the bubbles
         const bubbleImage = this.getRandomBubbleImageKey();
 
         // Create the bubble sprite
-        const bubble = scene.physics.add.image(
-          this.xOffset + x * this.bubbleSize,
+        const bubble = scene.physics.add.sprite(
+          xOffset + x * this.bubbleSize,
           this.yOffset + y * this.bubbleSize,
           bubbleImage
         );
