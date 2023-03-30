@@ -119,7 +119,7 @@ export class Emojipop extends Phaser.Scene {
     this.movingBubble = bubble;
   }
 
-  snapToGrid(bubble: Phaser.Types.Physics.Arcade.ImageWithDynamicBody) {
+  snapToGrid(bubble: Phaser.GameObjects.Image) {
     const xGrid = Math.round((bubble.x - this.xOffset) / this.bubbleSize);
     const yGrid = Math.round((bubble.y - this.yOffset) / this.bubbleSize);
 
@@ -133,8 +133,8 @@ export class Emojipop extends Phaser.Scene {
   }
 
   handleBubbleCollision(
-    bubble: Phaser.Types.Physics.Arcade.ImageWithDynamicBody,
-    other: Phaser.Types.Physics.Arcade.ImageWithDynamicBody
+    bubble: Phaser.GameObjects.Image,
+    other: Phaser.GameObjects.Image
   ) {
     this.collisionDetected = true;
 
