@@ -6,9 +6,9 @@ export class Emojipop extends Phaser.Scene {
   xOffset: number;
   yOffset: number;
   bubbleSize: number;
-  launcher: Phaser.Physics.Arcade.Sprite;
-  bubbles: Phaser.GameObjects.Group;
-  board: Phaser.Physics.Arcade.Sprite[][];
+  launcher!: Phaser.GameObjects.Image;
+  bubbles!: Phaser.GameObjects.Group;
+  board: Phaser.GameObjects.Image[][];
   shooting: boolean;
   movingBubble: Phaser.Physics.Arcade.Sprite | null;
   collisionDetected: boolean;
@@ -44,6 +44,7 @@ export class Emojipop extends Phaser.Scene {
     // Generate your board here
     this.board = this.generateBoard(this);
     this.bubbles = this.add.group();
+    this.launcher = this.physics.add.sprite(400, 550, "launcher");
 
     this.physics.add.collider(
       this.bubbles,
@@ -59,8 +60,6 @@ export class Emojipop extends Phaser.Scene {
         this.bubbles.add(this.board[y][x]);
       }
     }
-
-    this.launcher = this.physics.add.sprite(400, 550, "launcher");
 
     // Scale the launcher to the desired size
     const launcherScale = this.bubbleSize / this.launcher.width;
@@ -200,14 +199,14 @@ export class Emojipop extends Phaser.Scene {
     return matches;
   }
 
-  clearMatches(matches: Phaser.Physics.Arcade.Image[]) {
+  clearMatches(matches: Phaser.GameObjects.Image[]) {
     // Remove the matched bubbles from the bubbles group and destroy them
     matches.forEach((match) => {
       this.bubbles.remove(match, true, true);
     });
   }
 
-  getNeighbors(board: Phaser.Physics.Arcade.Image[][], x: number, y: number) {
+  getNeighbors(board: Phaser.GameObjects.Image[][], x: number, y: number) {
     const neighbors = [];
 
     // Get left and right neighbors
