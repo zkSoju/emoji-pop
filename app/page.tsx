@@ -1,3 +1,4 @@
+"use client";
 import EmojipopGame from "@/components/EmojipopGame";
 
 export default function Home() {
