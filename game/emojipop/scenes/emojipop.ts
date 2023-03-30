@@ -49,7 +49,7 @@ export class Emojipop extends Phaser.Scene {
     this.physics.add.collider(
       this.bubbles,
       this.bubbles,
-      this.handleBubbleCollision,
+      this.handleBubbleCollision as ArcadePhysicsCallback,
       undefined,
       this
     );
@@ -246,7 +246,7 @@ export class Emojipop extends Phaser.Scene {
       this.physics.collide(
         this.movingBubble,
         this.bubbles,
-        this.handleBubbleCollision,
+        this.handleBubbleCollision as ArcadePhysicsCallback,
         undefined,
         this
       );
